@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import { Link } from 'react-router-dom'
+import md5 from 'md5'
 import { Grid, Form, Segment, Button, Message, Header, Icon } from 'semantic-ui-react'
 
 import firebase from '../../firebase'
@@ -11,7 +12,8 @@ class Register extends Component {
         password: "",
         passwordConfirmation: "",
         errors: [],
-        loading: false
+        loading: false,
+        usersRef: firebase.database().ref('users')
     };
 
     handleChange = event => {
@@ -61,13 +63,40 @@ class Register extends Component {
                 .createUserWithEmailAndPassword(this.state.email, this.state.password)
                 .then(createdUser => {
                     console.log(createdUser);
-                    this.setState({ loading: false });
+                    createdUser.user.updateProfile({
+                        displayName: this.state.username,
+                        //To generate an avatar image for each new user
+                        photoURL: `http://gravatar.com/avatar/${md5(createdUser.user.email)}?d=identicon`
+                    })
+                        .then(() => {
+                            this.saveUser(createdUser).then(() => {
+                                console.log("User Saved")
+                            });
+                        })
+                        .catch(err => {
+                            console.error(err)
+                            this.setState({
+                                errors: this.state.errors.concat(err),
+                                loading: false
+                            });
+                        });
                 }) //Since this is a promise, get current created user as createdUser
                 .catch(err => {
                     console.error(err)
-                    this.setState({ errors: this.state.errors.concat(err), loading: false });
+                    this.setState({
+                        errors: this.state.errors.concat(err),
+                        loading: false
+                    });
                 });
         }
+    }
+
+    saveUser = createdUser => {
+        return this.state.usersRef.child(createdUser.user.uid).set({
+            name: createdUser.user.displayName,
+            avatar: createdUser.user.photoURL
+        })
+
     }
 
     handleInputError = (errors, inputName) => {
