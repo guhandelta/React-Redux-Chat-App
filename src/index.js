@@ -6,7 +6,7 @@ import App from './components/App';
 import { Login, Register } from './components/Auth'
 import * as serviceWorker from './serviceWorker';
 import firebase from './firebase'
-import { setUser } from './actions'
+import { setUser, clearUser } from './actions'
 import Spinner from './Spinner'
 
 import { createStore } from 'redux'
@@ -26,6 +26,9 @@ class Root extends React.Component {
         // console.log(user);
         this.props.setUser(user);
         this.props.history.push('/');
+      } else { //When the listener fn() can't find the user
+        this.props.history.push('/login');
+        this.props.clearUser();//Clear the user from the global state
       }
     })
   }
@@ -47,7 +50,7 @@ const mapStateToProps = state => ({
 })
 
 // Wrap the Root component with the withROuter HOC, to put the history object within the Root component
-const RootWithAuth = withRouter(connect(mapStateToProps, { setUser })(Root));
+const RootWithAuth = withRouter(connect(mapStateToProps, { setUser, clearUser })(Root));
 // connect(mapStateToProps, mapDispatchStateToProps{where the actions are received from})
 // connect() and mapDispatchToProps will take the setUser action and put it on the props obj of component, which is wrapped with connect()
 // mapStateToProps is passed as teh 1st arg to connect() to get the loading data from the state object, to see when the setUser action-
