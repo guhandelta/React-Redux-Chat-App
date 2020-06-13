@@ -12,6 +12,16 @@ class Channels extends Component {
         modal: false
     }
 
+    componentDidMount() {
+        let loadedChannels = [];
+        // Add an event listener to the channelsRef from state, using the on() and listen for child_added event
+        this.state.channelsRef.on('child_added', snap => { //snap callBack helps to ge the info abt every new child added
+            loadedChannels.push(snap.val()); //snap.val() => The new piece of data added to the channelsRef
+            console.log(loadedChannels);
+            this.setState({ channels: loadedChannels });
+        })
+    }
+
     addChannel = () => {
         const { channelsRef, channelDetails, channelName, user } = this.state;
         // Creating unique key for each new channel added
@@ -39,6 +49,19 @@ class Channels extends Component {
             .catch(err => console.error(err));
     }
 
+    displayChannels = channels => (
+        channels.length > 0 && channels.map(channel => (
+            <Menu.Item
+                key={channel.id}
+                onClick={() => console.log(channel)}
+                name={channel.name}
+                style={{ opacity: 0.7 }}
+            >
+                # {channel.name}
+            </Menu.Item>
+        ))
+    )
+
     openModal = () => this.setState({ modal: true });
     closeModal = () => this.setState({ modal: false });
 
@@ -65,7 +88,7 @@ class Channels extends Component {
                     </span>
                     ({channels.length}) <Icon name="add" onClick={this.openModal} />
                     </Menu.Item>
-                    {/* Channels */}
+                    {this.displayChannels(channels)}
                 </Menu.Menu>
 
                 {/* Add Channel Modal */}
