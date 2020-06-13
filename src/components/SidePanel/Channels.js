@@ -11,17 +11,32 @@ class Channels extends Component {
         channelName: '',
         channelDetails: '',
         channelsRef: firebase.database().ref('channels'),
-        modal: false
+        modal: false,
+        firstLoad: true,
+        activeChannel: ''
     }
 
     componentDidMount() {
+        this.addListeners();
+    }
+
+    addListeners = () => {
         let loadedChannels = [];
         // Add an event listener to the channelsRef from state, using the on() and listen for child_added event
         this.state.channelsRef.on('child_added', snap => { //snap callBack helps to ge the info abt every new child added
             loadedChannels.push(snap.val()); //snap.val() => The new piece of data added to the channelsRef
             console.log(loadedChannels);
-            this.setState({ channels: loadedChannels });
+            this.setState({ channels: loadedChannels }, () => this.setFirstChannel());
         })
+    }
+
+    setFirstChannel = () => {
+        const firstChannel = this.state.channels[0];
+        if (this.state.firstLoad && this.state.channels.length > 0) {
+            this.props.setCurrentChannel(firstChannel);
+            this.setActiveChannel(firstChannel);
+        }
+        this.setState({ firstLoad: false });
     }
 
     addChannel = () => {
@@ -58,6 +73,7 @@ class Channels extends Component {
                 onClick={() => this.changeChannel(channel)}
                 name={channel.name}
                 style={{ opacity: 0.7 }}
+                active={channel.id === this.state.activeChannel}
             >
                 # {channel.name}
             </Menu.Item>
@@ -70,7 +86,14 @@ class Channels extends Component {
     // Fn() to add a channel to the global state tree
     handleChange = event => this.setState({ [event.target.name]: event.target.value });
 
-    changeChannel = channel => this.props.setCurrentChannel(channel);
+    changeChannel = channel => {
+        this.setActiveChannel(channel);
+        this.props.setCurrentChannel(channel);
+    }
+
+    setActiveChannel = channel => {
+        this.setState({ activeChannel: channel.id });
+    }
 
     handleSubmit = event => {
         event.preventDefault();
