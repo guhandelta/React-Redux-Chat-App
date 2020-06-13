@@ -17,7 +17,13 @@ class Channels extends Component {
     }
 
     componentDidMount() {
+        // Add listeners when he component is mounted into
         this.addListeners();
+    }
+
+    componentWillMount() {
+        // Remove the active listeners when a new route is visited and this component is unmounted
+        this.removeListeners();
     }
 
     addListeners = () => {
@@ -28,6 +34,11 @@ class Channels extends Component {
             console.log(loadedChannels);
             this.setState({ channels: loadedChannels }, () => this.setFirstChannel());
         })
+    }
+
+    removeListeners = () => {
+        // off() removes the active listeners/refs/childRefs on the element
+        this.state.channelsRef.off();
     }
 
     setFirstChannel = () => {
