@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import firebase from '../../firebase'
+import uuidv4 from 'uuid/v4'
 import FileModal from './FileModal'
 import { Segment, Button, Input } from 'semantic-ui-react'
 
@@ -11,7 +12,11 @@ class MessageForm extends Component {
         user: this.props.currentUser,
         loading: false,
         errors: [],
-        modal: false
+        modal: false,
+        uploadState: '',
+        uploadTask: null,
+        stroageRef: firebase.storage().ref(), //ref to the firebase storage
+        percentUploaded: 0
     }
 
     openModal = () => this.setState({ modal: true });
@@ -21,7 +26,7 @@ class MessageForm extends Component {
         this.setState({ [event.target.name]: event.target.value });
     }
 
-    createMessage = () => {
+    createMessage = (fileUrl = null) => {
         const message = {
             timestamp: firebase.database.ServerValue.TIMESTAMP, //Timestamp when the message was created
             user: {
@@ -29,8 +34,14 @@ class MessageForm extends Component {
                 name: this.state.user.displayName,
                 avatar: this.state.user.photoURL
             },
-            content: this.state.message
         };
+        // Now messages, both with, content and image properties, so it needs to be determined as which is which
+        if (fileUrl !== null) {
+            // Set animage property on the message obj, if a fileUrl is passed onto the createMessage()
+            message['image'] = fileUrl;
+        } else {
+            message['content'] = this.state.message;
+        }
         return message;
     }
 
@@ -61,7 +72,61 @@ class MessageForm extends Component {
     }
 
     uploadFile = (file, metadata) => {
-        console.log(file, metadata);
+        // To post that image as a message
+        const pathToUpload = this.state.channel.id;
+        const ref = this.props.messagesRef;
+        const filePath = `chat/public/${uuidv4()}.jpg`; //Creating unique string as ID for ever image, uploaded
+
+        this.setState({
+            uploadState: 'uploading',
+            uploadTask: this.state.stroageRef.child(filePath).put(file, metadata)
+        },
+            () => {
+                this.state.uploadTask.on('state_changed', snap => {
+                    const percentUploaded = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+                    this.setState({ percentUploaded });
+                },
+
+                    err => {
+                        console.error(err);
+                        this.setState({
+                            errors: this.state.errors.concat(err),
+                            uploadState: 'error',
+                            uploadTask: null
+                        });
+
+                    },
+                    () => { //Callback to ref snapshot -> ref property on uploadTask, to exe getDownloadURL() -> Promise, that allows to-
+                        //- get the DownloadURL of the img that has been uploaded to the firebase storage
+                        this.state.uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
+                            this.sendFileMessage(downloadURL, ref, pathToUpload);
+                        })
+                            .catch(err => {
+                                console.error(err);
+                                this.setState({
+                                    errors: this.state.errors.concat(err),
+                                    uploadState: 'error',
+                                    uploadTask: null
+                                });
+                            })
+                    }
+
+                )
+            }
+        );
+    }
+
+    sendFileMessage = (fileUrl, ref, pathToUpload) => {
+        ref.child(pathToUpload) //set a child on the ref
+            .push()
+            .set(this.createMessage(fileUrl))
+            .then(() => {
+                this.setState({ uploadState: 'done' })
+            })
+            .catch(err => {
+                console.error(err);
+                this.setState({ errors: this.state.errors.concat(err) })
+            })
     }
 
     render() {
