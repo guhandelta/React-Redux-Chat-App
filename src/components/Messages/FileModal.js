@@ -1,7 +1,43 @@
 import React, { Component } from 'react'
+import mime from 'mime-types' //To help assist in determining the file type/extension
 import { Modal, Input, Button, Icon } from 'semantic-ui-react'
 
 class FileModal extends Component {
+    state = {
+        file: null,
+        authorized: [
+            'image/jpeg',
+            'image/png'
+        ]
+    };
+
+    addFile = event => {
+        const file = event.target.files[0]; // Accessing the file uploaded || [0] ref => as it would be an array
+        if (file) {
+            this.setState({ file });
+        }
+    }
+
+    sendFile = () => {
+        const { file } = this.state;
+        const { uploadFile, closeModal } = this.props;
+
+        if (file !== null) {
+            if (this.isAuthorized) {
+                // Storing the content type of the file being/uploaded in this metadata object
+                const metadata = { contentType: mime.lookup(file.name) };
+                uploadFile(file, metadata);
+                closeModal();
+                this.clearFile();
+            }
+
+        }
+    }
+
+    isAuthorized = filename => this.state.authorized.includes(mime.lookup(filename));
+
+    clearFile = () => this.setState({ file: null });
+
     render() {
         const { modal, closeModal } = this.props;
         return (
@@ -9,6 +45,7 @@ class FileModal extends Component {
                 <Modal.Header>Choose an Image to send</Modal.Header>
                 <Modal.Content>
                     <Input
+                        onChange={this.addFile}
                         fluid
                         label="File Types: jpg, png"
                         name="file"
@@ -16,7 +53,7 @@ class FileModal extends Component {
                     />
                 </Modal.Content>
                 <Modal.Actions>
-                    <Button color="green" inverted>
+                    <Button color="green" inverted onClick={this.sendFile}>
                         <Icon name="checkmark" /> Send
                     </Button>
                     <Button color="red" inverted onClick={closeModal}>
