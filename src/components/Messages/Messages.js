@@ -13,7 +13,8 @@ class Messages extends Component {
         channel: this.props.currentChannel,
         user: this.props.currentUser,
         messages: [],
-        messagesLoading: true //To keep track of when the messages are loaded
+        messagesLoading: true, //To keep track of when the messages are loaded
+        totalUniqueUsers: ''
     }
 
     componentDidMount() {
@@ -37,8 +38,26 @@ class Messages extends Component {
                 messages: loadedMessages,
                 messagesLoading: false
             });
+            this.countUniqueUsers(loadedMessages);
         })
     }
+
+    countUniqueUsers = messages => {
+        //accumulator, value used for iterating
+        const uniqueUsers = messages.reduce((acc, message) => {
+
+            if (!acc.includes(message.user.name)) {
+                acc.push(message.user.name);
+            }
+            return acc; //return the accumulator
+        }, []);
+        const plural = uniqueUsers.length > 1 || uniqueUsers === 0;
+        const totalUniqueUsers = `${uniqueUsers.length} user${plural ? 's' : ''}`;
+        this.setState({ totalUniqueUsers })
+    }
+
+    // Fn() to change the name and number of users for the channel, the user is currently on, within the header
+    displayChannelName = channel => channel ? `#${channel.name}` : '';
 
     displayMessages = messages => (
         messages.length && messages.map(message => (
@@ -51,10 +70,13 @@ class Messages extends Component {
     )
 
     render() {
-        const { messagesRef, channel, user, messages } = this.state;
+        const { messagesRef, channel, user, messages, totalUniqueUsers } = this.state;
         return (
             <React.Fragment>
-                <MessagesHeader />
+                <MessagesHeader
+                    channelName={this.displayChannelName(channel)}
+                    totalUniqueUsers={totalUniqueUsers}
+                />
 
                 <Segment>
                     <Comment.Group className="messages">
