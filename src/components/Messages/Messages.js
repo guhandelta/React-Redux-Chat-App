@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { Segment, Comment } from 'semantic-ui-react'
+import { Segment, Comment, SearchResults } from 'semantic-ui-react'
 import firebase from '../../firebase'
 
 import Message from './Message'
@@ -14,12 +14,15 @@ class Messages extends Component {
         user: this.props.currentUser,
         messages: [],
         messagesLoading: true, //To keep track of when the messages are loaded
-        totalUniqueUsers: ''
+        totalUniqueUsers: '',
+        searchTerm: '',
+        searchResults: [],
+        searchLoading: false
     }
 
     componentDidMount() {
         // Check to see if any value for Channel and User is available, in the global state, when the component mounts
-        const { channel, user, messages } = this.state;
+        const { channel, user } = this.state;
 
         if (channel && user) {
             this.addListeners(channel.id); //Pass down the id of the current active channel
@@ -40,6 +43,21 @@ class Messages extends Component {
             });
             this.countUniqueUsers(loadedMessages);
         })
+    }
+
+    handleSearchChange = event => this.setState({ searchTerm: event.target.value, searchLoading: true }, () => this.handleSearchMessages())
+
+    handleSearchMessages = () => {
+        const channelMessages = [...this.state.messages];
+        const regex = new RegExp(this.state.searchTerm, 'gi'); // 'go' flag => apply the regex globally with case insensitivity
+        const searchResults = channelMessages.reduce((acc, message) => {
+            if (message.content && message.content.match(regex) || message.user.name.match(regex)) { //Search for text in message or user
+                acc.push(message);
+            }
+            return acc;
+        }, []);
+        this.setState({ searchResults });
+        setTimeout(() => this.setState({ searchLoading: false }), 800);
     }
 
     countUniqueUsers = messages => {
@@ -70,17 +88,21 @@ class Messages extends Component {
     )
 
     render() {
-        const { messagesRef, channel, user, messages, totalUniqueUsers } = this.state;
+        // prettier-ignore
+        const { messagesRef, channel, user, messages, totalUniqueUsers, searchTerm, searchResults, searchLoading } = this.state;
         return (
             <React.Fragment>
                 <MessagesHeader
                     channelName={this.displayChannelName(channel)}
                     totalUniqueUsers={totalUniqueUsers}
+                    handleSearchChange={this.handleSearchChange}
+                    searchLoading={searchLoading}
                 />
 
                 <Segment>
                     <Comment.Group className="messages">
-                        {this.displayMessages(messages)}
+                        {/* Display the search results if a serchTerm is mentioned or display the complete messages */}
+                        {searchTerm ? this.displayMessages(searchResults) : this.displayMessages(messages)}
                     </Comment.Group>
                 </Segment>
                 {/* Passing in the messageRef as a prop, to allow creating messages in MessageForm */}
