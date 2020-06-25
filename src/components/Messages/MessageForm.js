@@ -8,6 +8,7 @@ import { Segment, Button, Input } from 'semantic-ui-react'
 class MessageForm extends Component {
 
     state = {
+        privateChannel: this.props.isPrivateChannel,
         message: '',
         channel: this.props.currentChannel,
         user: this.props.currentUser,
@@ -47,12 +48,12 @@ class MessageForm extends Component {
     }
 
     sendMessage = () => {
-        const { messagesRef } = this.props;
+        const { getMessagesRef } = this.props;
         const { message, channel, user } = this.state;
 
         if (message) {
-            messagesRef
-                .child(channel.id)// To specify, to whihc channel would this message be added to
+            getMessagesRef()
+                .child(channel.id)// To specify, to which channel would this message be added to
                 .push()//messagesRef) // Push the channel id of the channel the user is currently on, into messagesRef
                 .set(this.createMessage())
                 .then(() => {
@@ -72,10 +73,18 @@ class MessageForm extends Component {
         }
     }
 
+    getPath = () => {
+        if (this.state.privateChannel) {
+            return `chat/private-${this.state.channel.id}`;
+        } else {
+            return 'chat/public';
+        }
+    }
+
     uploadFile = (file, metadata) => {
         // To post that image as a message
         const pathToUpload = this.state.channel.id;
-        const ref = this.props.messagesRef;
+        const ref = this.props.getMessagesRef();
         const filePath = `chat/public/${uuidv4()}.jpg`; //Creating unique string as ID for ever image, uploaded
 
         this.setState({

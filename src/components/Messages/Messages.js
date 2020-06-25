@@ -9,6 +9,8 @@ import MessageForm from './MessageForm'
 class Messages extends Component {
 
     state = {
+        privateChannel: this.props.isPrivateChannel,
+        privateMessagesRef: firebase.database().ref('privateMessages'), // create a separate collection for private messages
         messagesRef: firebase.database().ref('messages'),
         channel: this.props.currentChannel,
         user: this.props.currentUser,
@@ -35,7 +37,8 @@ class Messages extends Component {
 
     addMessageListener = channelId => {
         let loadedMessages = [];
-        this.state.messagesRef.child(channelId).on('child_added', snap => {
+        const ref = this.getMessagesRef();
+        ref.child(channelId).on('child_added', snap => {
             loadedMessages.push(snap.val());
             this.setState({
                 messages: loadedMessages,
@@ -60,6 +63,12 @@ class Messages extends Component {
         setTimeout(() => this.setState({ searchLoading: false }), 800);
     }
 
+
+    getMessagesRef = () => {
+        const { messagesRef, privateMessagesRef, privateChannel } = this.state;
+        return privateChannel ? privateMessagesRef : messagesRef;
+    }
+
     countUniqueUsers = messages => {
         //accumulator, value used for iterating
         const uniqueUsers = messages.reduce((acc, message) => {
@@ -75,7 +84,8 @@ class Messages extends Component {
     }
 
     // Fn() to change the name and number of users for the channel, the user is currently on, within the header
-    displayChannelName = channel => channel ? `#${channel.name}` : '';
+    // @-> Private Channel, #-> Public Channel
+    displayChannelName = channel => channel ? `${this.state.privateChannel ? '@' : '#'}${channel.name}` : '';
 
     displayMessages = messages => (
         messages.length && messages.map(message => (
@@ -89,7 +99,7 @@ class Messages extends Component {
 
     render() {
         // prettier-ignore
-        const { messagesRef, channel, user, messages, totalUniqueUsers, searchTerm, searchResults, searchLoading } = this.state;
+        const { messagesRef, channel, user, messages, totalUniqueUsers, searchTerm, searchResults, searchLoading, privateChannel } = this.state;
         return (
             <React.Fragment>
                 <MessagesHeader
@@ -97,6 +107,7 @@ class Messages extends Component {
                     totalUniqueUsers={totalUniqueUsers}
                     handleSearchChange={this.handleSearchChange}
                     searchLoading={searchLoading}
+                    isPrivateChannel={privateChannel}
                 />
 
                 <Segment>
@@ -110,6 +121,8 @@ class Messages extends Component {
                     messagesRef={messagesRef}
                     currentChannel={channel}
                     currentUser={user}
+                    isPrivateChannel={privateChannel}
+                    getMessagesRef={this.getMessagesRef}
                 />
             </React.Fragment>
         )
